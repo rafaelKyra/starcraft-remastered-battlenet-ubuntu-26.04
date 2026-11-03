@@ -1,0 +1,7 @@
+starcraft-linux/
+prefix/
+runtime/
+dl/
+cache/
+*.exe
+*.tar.*
