@@ -74,8 +74,9 @@ On Windows Battle.net installs Apple's Bonjour for local-network discovery (mDNS
 
 | Symptom | Cause | Fix |
 |---|---|---|
+| `wineboot` fails / `/lib/ld-linux.so.2: could not open` / prefix not created | i386 libraries missing | `sudo dpkg --add-architecture i386 && sudo apt update && sudo apt install libc6:i386 libvulkan1:i386 libgl1:i386` (the script now stops early with this hint) |
 | Installer window never appears, log says `no driver could be loaded` | Wine's Wayland driver fails on Ubuntu 26.04 | Already handled: `env.sh` unsets `WAYLAND_DISPLAY` and forces X11 |
-| Battle.net login fails / blank | Old Wine | Use a recent Wine TkG/GE build (this script downloads the latest) |
+| Battle.net login fails / blank | Old Wine | Use a recent Wine TkG/GE build (the pinned 11.21 works) |
 | Changed settings have no effect | A Battle.net instance is still running with the old environment | `source ~/starcraft-linux/env.sh && wineserver -k`, then start again |
 | `libgamemodeauto.so.0 cannot be preloaded` | 32-bit gamemode lib missing | Harmless; or `sudo apt install libgamemodeauto0:i386` |
 | `dpkg was interrupted` | Old interrupted apt | `sudo dpkg --configure -a` |

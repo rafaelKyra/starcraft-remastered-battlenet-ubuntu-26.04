@@ -12,7 +12,8 @@ say "1/7 Verificari"
 for c in curl tar xz grep awk; do command -v "$c" >/dev/null || die "Lipseste '$c' (sudo apt install curl tar xz-utils)"; done
 [ -n "${DISPLAY:-}" ] || die "Ruleaza din sesiunea grafica (DISPLAY gol)."
 dpkg --print-foreign-architectures 2>/dev/null | grep -q i386 || \
-  echo "ATENTIE: arhitectura i386 nu e activa. Ruleaza: sudo dpkg --add-architecture i386 && sudo apt update"
+  die "Arhitectura i386 nu e activa (Wine are nevoie de ea). Ruleaza prerechizitele din README: sudo dpkg --add-architecture i386 && sudo apt update && sudo apt install -y libvulkan1:i386 libgl1:i386 libgnutls30:i386"
+[ -e /lib/ld-linux.so.2 ] || [ -e /lib32/ld-linux.so.2 ] || die "Lipseste loader-ul 32-bit (sudo apt install libc6:i386)."
 FREE_GB=$(df -BG --output=avail "$(dirname "$DEST")" | tail -1 | tr -dc 0-9)
 [ "$FREE_GB" -ge 15 ] || die "Spatiu liber insuficient (${FREE_GB} GB, minim 15 GB)."
 command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=name,driver_version --format=csv,noheader || echo "GPU non-NVIDIA: se foloseste Mesa Vulkan."
@@ -78,6 +79,8 @@ source ./env.sh
 
 say "6/7 Creez prefixul Wine si instalez DXVK"
 wineboot -u >/dev/null 2>&1 || true
+wineserver -w 2>/dev/null || true
+[ -d prefix/drive_c/windows/system32 ] || die "Prefixul Wine nu s-a creat. Ruleaza manual: source $DEST/env.sh && wineboot -u  (cauza frecventa: lipsesc bibliotecile i386)."
 cp "runtime/$DDIR"/x64/*.dll prefix/drive_c/windows/system32/
 cp "runtime/$DDIR"/x32/*.dll prefix/drive_c/windows/syswow64/
 wine reg add 'HKCU\Software\Wine' /v Version /d win10 /f >/dev/null
