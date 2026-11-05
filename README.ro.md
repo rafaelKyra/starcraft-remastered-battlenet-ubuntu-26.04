@@ -58,12 +58,27 @@ Pe Windows, Battle.net instalează Bonjour pentru descoperirea în rețeaua loca
 - **Battle.net se actualizează singur și nu poate fi înghețat în mod sigur.** Ghidul nu cunoaște o metodă oficială de a-l bloca. Caută opțiuni de update în *Settings* din aplicație și păstrează un snapshot făcut cât merge. Schimbările de pe serverele Blizzard pot strica login-ul; dacă se întâmplă după un update, vezi secțiunea de depanare.
 - Nu schimba versiunea de Wine într-un prefix existent fără snapshot.
 
+## Problemă cunoscută: Battle.net pornește și se închide imediat (rezolvată)
+
+**Simptom:** fereastra Battle.net apare o secundă și dispare; în terminal apare `free(): invalid size`; în `Errors/…/Crash.txt` scrie `0x80000003 (BREAKPOINT)` în `libcef.dll`. Și installer-ul poate crăpa la fel.
+
+**Cauza (verificată 2026-11-05, Battle.net 2.53.8 build 17986, Wine TkG 11.21):** un mediu prea „optimizat". Setate global, aceste variabile fac clientul Battle.net (Chromium/CEF) să crape la pornire: `__GL_THREADED_OPTIMIZATIONS`, `__GL_MaxFramesAllowed`, `__GL_YIELD`, `STAGING_SHARED_MEMORY`, `WINEFSYNC/WINEESYNC/WINENTSYNC=0` și `d3d11`/`dxgi`=native (DXVK) pentru *toate* programele. Cu mediul minim, clientul a rămas pornit la 3 din 3 porniri la rece. Nu am aflat care singură variabilă e vinovată. Versiunile vechi ale ghidului puneau exact aceste variabile.
+
+**Nu e cauza (testat):** update-ul clientului Blizzard, bibliotecile de sistem șterse (reinstalate, tot crăpa), calea cu symlink sau cu spații, discul VeraCrypt/ext, cache-ul Chromium, randarea GPU/software.
+
+**Remediere pentru o instalare existentă:**
+```bash
+./scripts/fix-startup-crash.sh ~/starcraft-linux
+```
+Salvează `env.sh`, scrie varianta minimă și activează DXVK **doar pentru `StarCraft.exe`** (Wine `AppDefaults`), nu global. Instalările noi făcute cu `install.sh` o au deja.
+
+**Reparat și:** `install.sh` suprascria un shortcut Battle.net existent care arăta spre altă instalare; acum îl salvează ca `.bak-…` și te anunță.
+
 ## Dacă ceva nu merge
 | Problemă | Soluție |
 |---|---|
 | Fereastra nu apare | Scriptul forțează deja X11 (driverul Wayland din Wine pică pe 26.04) |
 | Am schimbat setări și nu se văd | `source ~/starcraft-linux/env.sh && wineserver -k` și pornești din nou |
-| `libgamemodeauto.so.0 cannot be preloaded` | Inofensiv; `sudo apt install libgamemodeauto0:i386` îl elimină |
 | `dpkg was interrupted` | `sudo dpkg --configure -a` |
 | Vreau diagnostic | `./scripts/diagnose.sh ~/starcraft-linux` |
 

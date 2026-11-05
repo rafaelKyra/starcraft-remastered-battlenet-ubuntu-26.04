@@ -52,25 +52,24 @@ curl -fsSL -o runtime/winetricks https://raw.githubusercontent.com/Winetricks/wi
 say "5/7 Scriptul de mediu (env.sh) si launcher"
 cat > env.sh <<ENV
 #!/bin/bash
+# Mediu minim, testat stabil 2026-11-05. NU adauga aici __GL_*, STAGING_SHARED_MEMORY, WINEFSYNC/ESYNC,
+# WINENTSYNC=0 sau d3d11/dxgi=native global: cu ele clientul Battle.net 2.53.8 crapa la pornire
+# (assert in libcef.dll, "free(): invalid size"). Vezi README, sectiunea "Known issue".
 R="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 export WINEPREFIX="\$R/prefix" WINEARCH=win64
 export PATH="\$R/runtime/$WDIR/bin:\$R/runtime:\$PATH"
-export WINEDLLOVERRIDES="winemenubuilder.exe=d;d3d9,d3d10core,d3d11,dxgi=n,b"
+export WINEDLLOVERRIDES="winemenubuilder.exe=d"
 export WINEDEBUG=-all
 unset WAYLAND_DISPLAY            # Wine ruleaza pe X11/XWayland (driverul Wayland pica pe Ubuntu 26.04)
 export WINE_GRAPHICS_DRIVER=x11
-export DXVK_STATE_CACHE_PATH="\$R/cache" DXVK_LOG_LEVEL=none __GL_SHADER_DISK_CACHE_PATH="\$R/cache"
-export WINEFSYNC=1 WINEESYNC=1 STAGING_SHARED_MEMORY=1
-export __GL_THREADED_OPTIMIZATIONS=1 __GL_MaxFramesAllowed=1 __GL_YIELD=USLEEP
-mkdir -p "\$R/cache"
 ENV
 cat > start-battlenet.sh <<'LAUNCH'
 #!/bin/bash
-source "$(dirname "$(readlink -f "$0")")/env.sh"
+D="$(dirname "$(readlink -f "$0")")"
+source "$D/env.sh"
 B="$WINEPREFIX/drive_c/Program Files (x86)/Battle.net/Battle.net Launcher.exe"
 [ -f "$B" ] || B="$WINEPREFIX/drive_c/Program Files (x86)/Battle.net/Battle.net.exe"
-command -v gamemoderun >/dev/null && G=gamemoderun
-exec ${G:-} wine "$B" "$@"
+exec wine "$B" "$@"
 LAUNCH
 chmod +x env.sh start-battlenet.sh
 # shellcheck disable=SC1091
@@ -82,12 +81,17 @@ cp "runtime/$DDIR"/x64/*.dll prefix/drive_c/windows/system32/
 cp "runtime/$DDIR"/x32/*.dll prefix/drive_c/windows/syswow64/
 wine reg add 'HKCU\Software\Wine' /v Version /d win10 /f >/dev/null
 wine reg add 'HKCU\Software\Wine\Drivers' /v Graphics /d x11 /f >/dev/null
+for d in d3d9 d3d11 dxgi; do wine reg add 'HKCU\Software\Wine\AppDefaults\StarCraft.exe\DllOverrides' /v $d /d native /f >/dev/null; done   # DXVK doar pentru joc
 wine reg add 'HKCU\Software\Wine\X11 Driver' /v UseTakeFocus /d N /f >/dev/null
 wine reg add 'HKCU\Software\Wine\DirectInput' /v MouseWarpOverride /d force /f >/dev/null
 
 say "7/7 Shortcut in meniul de aplicatii"
 mkdir -p ~/.local/share/applications
-cat > ~/.local/share/applications/battlenet-starcraft.desktop <<DESK
+DESKF=~/.local/share/applications/battlenet-starcraft.desktop
+if [ -f "$DESKF" ] && ! grep -q "^Exec=$DEST/" "$DESKF"; then
+  cp "$DESKF" "$DESKF.bak-$(date +%Y%m%d%H%M)"; echo "ATENTIE: exista deja un shortcut Battle.net pentru alta instalare; l-am salvat ca .bak si l-am inlocuit."
+fi
+cat > "$DESKF" <<DESK
 [Desktop Entry]
 Type=Application
 Name=Battle.net (StarCraft)
